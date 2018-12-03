@@ -1,0 +1,123 @@
+---
+title: "inegiR_v2"
+author: "Alan Ponce"
+date: "12/2/2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(inegiR)
+library(knitr)
+
+#Reference [http://enelmargen.org/datascience/inegiR-v2/index.html]
+#INEGI: Sistema de Ruteo de Mexico [http://gaia.inegi.org.mx/sakbe_v3.1/genera_token.jsp]
+
+```
+
+
+## Route API
+
+The first thing to understand is that INEGI has categorized sites in Mexico according to a “destiny id”. For example, the International Airport in Mexico city is destiny id #57. The inegi_destiny() function will help you find a destiny id based on a text criteria, sort of like googling the place and getting an address. Here is an example with a plaza in Monterrey:
+
+```{r}
+
+token <- "V7DN9XDD-QWMO-KwKf-3ZMD-f4nSCSK5VRbk"
+
+dest_ids <- inegi_destiny("monterrey", token)
+
+glimpse(dest_ids)
+
+destiny1 <- inegi_destiny("Macroplaza", token = token)
+
+kable(destiny1)
+
+```
+
+When you know two destiny id’s, you can now use the API to learn about potential routes you can take between them. This function will return a list with two objects: a data.frame of route information (kilometers, toll cost, etc) and another data.frame with all the coordinates in the route. Intuitively, if you join all the dots, you can clearly see the route you would take.
+
+To illustrate, i’m going to use the first result and see what the route would be from there to the U.S. Border (which is the other id) with a normal car and with a tolled highway. A further look at the documentation will explain the names and options in the parameters.
+
+```{r}
+route <- inegi_route(from = 6940, to = 7426, token = token, pref = 1, vehicle = 1)
+
+glimpse(route)
+
+kable(route$ROUTE)
+
+```
+
+The total cost is NA because the default value for the calc_cost parameter is FALSE. When this is set to TRUE, the function will additionally look for the price of gasoline in the Sakbé API and calculate a cost of the trip. Be warned, this is very experimental and it is just a rule of thumb (you can see the documentation for a further explanation). Once the price of gasoline is calculated, any tolls are added and then a total cost is supplied. To do this, just change the parameter.
+
+```{r}
+route2 <- inegi_route(from = 6940, to = 7426, token = token, pref = 1, vehicle = 1, 
+                      calc_cost = TRUE)
+kable(route2$ROUTE)
+
+```
+
+All prices are reported in Mexican pesos.
+
+The second element in the list is the data.frame containing all point references in the route. As I said before, just connect the dots. Here is a preview:
+
+```{r}
+kable(head(route$COORDINATE_PATH))
+```
+
+## New GDP catalog
+
+Another huge issue that users reported was trying to find relevant indicator id’s in the INEGI webpage. As experienced users know, every economic data series has a unique id on the API. However, there is no catalog that allows you to find the id’s you are looking for. I have petitioned INEGI multiple times but got nowhere.
+
+My personal solution was to look up the series in the BIE application (a web browser version of the API) and download the data as a .iqy object. From there, I would hack my way into the file to find the unique id’s being called. Very time intensive and error-prone.
+
+So, to help each other out in this endeavour, I created a catalog of id’s. This version has all the sub-levels of GDP (up until 4th level desagregation), but I plan to update this catalog on a rolling basis. Any help would also be appreciated.
+
+You can see the catalog by calling the dataset like this:
+
+```{r}
+
+data("inegi_catalog")
+
+kable(head(inegi_catalog[,1:7]))
+# for more rows, see docs!
+
+inegi_catalog
+class(inegi_catalog)
+View(inegi_catalog)
+```
+
+### Compact metadata and series helper
+
+Two other common headaches came up with the past versions. First, the inegi_series() functions only accepted the full URL when most of the times, the only thing that changed between them was the number of the id. So I added a simple function to paste the entire URL string for the call to the API.
+
+```{r}
+
+GPD_ID <- 381016
+
+inegi_code(381016)
+
+```
+
+The second headache had to do with downloading multiple id’s. The list returned when using **inegi_series()** with the metadata parameter as TRUE is a bit clunky when using it in a loop or apply function. So I added a compact function that returns all the information in a tidy data.frame:
+
+```{r}
+
+token_inegi <- "6b11996c-1a52-72a9-0187-e49bf9e607ce"
+
+df <- compact_inegi_series(inegi_code(381016), token_inegi)
+
+glimpse(df)
+
+#View(df)
+
+kable(head(df))
+
+```
+
