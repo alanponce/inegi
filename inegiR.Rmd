@@ -1,0 +1,173 @@
+---
+title: "inegiR"
+author: "Alan Ponce"
+date: "12/2/2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(inegiR)
+library(knitr)
+
+#Reference [http://enelmargen.org/inegiR/vignette_eng.html]
+```
+
+
+##  downloading a data series
+
+```{r}
+
+token <- "6b11996c-1a52-72a9-0187-e49bf9e607ce"
+
+```
+
+Now, I wish to find the rate of inflation (which in the case of INEGI is a percent change of the INPC data series).
+
+This is the corresponding URL for INPC data.series:
+
+```{r}
+
+#XML format
+urlINPC <- "http://www3.inegi.org.mx/sistemas/api/indicadores/v1//Indicador/216064/00000/es/false/xml/"
+
+#JSON format
+urlINPC2 <- "http://www3.inegi.org.mx/sistemas/api/indicadores/v1//Indicador/216064/00000/es/false/json/"
+
+#Now, we are going to download this data series as a data.frame.
+
+INPC <- serie_inegi(urlINPC, token)
+
+# take a look
+head(INPC)
+tail(INPC)
+glimpse(INPC)
+
+```
+
+The optional “metadata” parameter in serie_inegi allows us to also download the metadata information from the data series, which includes date of update, units, frequency, etc.
+
+If “metadata” is set to TRUE, the information is parsed as a list of two elements: the metadata and the data frame.
+
+```{r}
+INPC_Metadata <- serie_inegi(urlINPC, token, metadata = TRUE)
+#INPC_Metadata
+
+class(INPC_Metadata)
+glimpse(INPC_Metadata)
+
+# To access any of these elements, simply use as a list:
+# date of last update
+INPC_Metadata$MetaData$UltimaActualizacion
+
+```
+
+Now that we have the INPC data series, we must apply a year-over-year change. For this we use the handy YoY() function, which let’s us choose the amount of periods to compare over (12 if you want year over year for a monthly series):
+
+```{r}
+
+Inflation <- YoY(INPC$Valores, 
+                 lapso = 12, 
+                 decimal=FALSE)
+
+class(Inflation)
+head(Inflation,  n= 20L)
+
+# if we want a dataframe, we simply build like this
+Inflation_df <- cbind.data.frame(Fechas = INPC$Fechas, 
+                                 Inflation = Inflation)
+
+Inflation_df
+glimpse(Inflation_df)
+
+```
+
+This method works for any URL obtained from the INEGI documentation, but for the most used indicators, the package has built-in shortcut wrappers.
+
+Let us obtain the same data series (inflation) via one of these specified shortcut functions:
+
+```{r}
+Inflation_fast <- inflacion_general(token)
+#Inflation_fast
+
+glimpse(Inflation_fast)
+head(Inflation_fast)
+tail(Inflation_fast)
+
+```
+
+## Downloading statistics from DENUE
+
+
+```{r}
+
+token_denue <- "31fae5dd-6bd4-4d33-a0e0-b0917cd55db2"
+
+#Reference v2 [http://enelmargen.org/datascience/inegiR-v2/index.html]
+```
+
+
+To download the businesses in a certain radius, we need a few coordinates. Let’s use the ones around Monterrey Mexico’s main square:
+
+```{r}
+latitud_macro<-"25.669194"
+
+longitud_macro<-"-100.309901"
+```
+
+Now, we download into a data.frame the list of businesses in a 250 meter radius.
+
+```{r}
+
+NegociosMacro <- denue_inegi(latitud = latitud_macro, 
+                             longitud = longitud_macro, 
+                             token_denue)
+
+#NegociosMacro
+
+head(NegociosMacro)[,1:2]
+
+
+```
+
+If you would like to change some parameters, this is accepted. For example a 1km radius and only businesses with “Restaurante” in the description.
+
+```{r}
+
+RestaurantsMacro <- denue_inegi(latitud = latitud_macro, 
+                                longitud = longitud_macro, 
+                                token_denue, 
+                                metros = 1000, 
+                                keyword = "Restaurante")
+
+
+head(RestaurantsMacro)[,1:2]
+
+```
+
+```{r}
+
+#token<-"webservice_token"
+latitud<-"25.669194"
+longitud<-"-100.30990"
+# in english
+businesses <- inegi_denue(latitud, longitud, token_denue, metros = 1000)
+businesses
+glimpse(businesses)
+#View(businesses)
+#kable(businesses)
+
+
+# in spanish (legacy)
+negocios <- denue_inegi(latitut, longitud, token_denue, metros = 100)
+
+
+```
+
