@@ -1,0 +1,27 @@
+---
+title: "mxmaps"
+author: "Alan Ponce"
+date: "12/2/2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## MxMaps
+
+
+```{r}
+library(tidyverse)
+library(inegiR)
+library(mxmaps)
+
+
+#Reference [https://github.com/diegovalle/mxmaps]
+```
+
+
+
