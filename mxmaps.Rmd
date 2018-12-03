@@ -18,10 +18,173 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(inegiR)
 library(mxmaps)
+library("scales")
 
 
 #Reference [https://github.com/diegovalle/mxmaps]
 ```
 
+## Quick Example
 
+```{r}
+
+data("df_mxstate")
+
+df_mxstate$value <- df_mxstate$pop
+
+mxstate_choropleth(df_mxstate,
+                    title = "Total population, by state") 
+
+```
+
+## Data
+
+The data.frame that you provide to the plotting functions must have one column named "region" and one column named "value". The entries for "region" must match the INEGI codes for states ("01", "02", etc) and municipios ("01001", "01002", etc) either as a string with or without a leading "0" or as numerics. The functions str_mxstate and str_mxmunicipio are provided to easily format codes to the INEGI specification. Also, two example data.frames, df_mxstate and df_mxmunicipio, are provided with demographic variables from the Encuesta Intercensal 2015.
+
+```{r}
+
+data("df_mxstate")
+knitr::kable(head(df_mxstate))
+
+data("df_mxmunicipio")
+
+knitr::kable(head(df_mxmunicipio))
+
+```
+
+## Municipios
+
+Here's another example showing Mexican municipios (similar to counties):
+
+```{r}
+
+data("df_mxmunicipio")
+
+df_mxmunicipio$value <-  df_mxmunicipio$indigenous / df_mxmunicipio$pop 
+
+mxmunicipio_choropleth(df_mxmunicipio, num_colors = 1,
+                       title = "Percentage of the population that self-identifies as indigenous")
+
+```
+
+You can also subset the area to show in the choropleth by using the zoom parameter:
+
+```{r}
+
+mxmunicipio_choropleth(df_mxmunicipio, num_colors = 1,
+                       zoom = subset(df_mxmunicipio, metro_area %in% c("Valle de México",
+                                                                       "Puebla-Tlaxcala",
+                                                                       "Cuernavaca",
+                                                                       "Toluca"))$region,
+                       title = "Percentage of the population that self-identifies\nas indigenous",
+                       legend = "%") 
+
+```
+
+You can use the show_states parameter to hide or show the state borders when making municipio choropleths.
+
+```{r}
+
+mxmunicipio_choropleth(df_mxmunicipio, num_colors = 1,
+                       zoom = c(31001:31106,30002:30212),
+                       title = "Percentage of the population that self-identifies\nas indigenous in Yucatán and Veracruz",
+                       show_states = FALSE,
+                       legend = "%")
+
+```
+
+Municipios de: Chihuahua, Hidalgo del Parral, Ciudad Juarez y Jimenez
+
+```{r}
+
+mxmunicipio_choropleth(df_mxmunicipio, num_colors = 1,
+                       zoom = c(08032:08037,08019:08036),
+                       title = "Percentage of the population that self-identifies\nas indigenous in Chihuahua",
+                       show_states = FALSE,
+                       legend = "%")
+
+```
+
+Municipio de Ciudad Juarez
+
+```{r}
+
+mxmunicipio_choropleth(df_mxmunicipio, num_colors = 1,
+                       zoom = c(08037),
+                       title = "Percentage of the population that self-identifies\nas indigenous in Chihuahua",
+                       show_states = FALSE,
+                       legend = "%")
+
+```
+
+You can also edit the ggplot object directly, for example, if you wanted to remove the municipio borders.
+
+
+```{r}
+
+#library("scales")
+
+df_mxmunicipio$value <- df_mxmunicipio$pop
+
+p <- mxmunicipio_choropleth(df_mxmunicipio,
+                            title = "Total population, by municipio", 
+                            legend = "population",
+                            num_colors = 9)
+p[["layers"]][[1]][["aes_params"]][["colour"]] <- "transparent"
+
+p
+
+
+```
+
+Another example with categorical data
+
+```{r}
+
+df_mxmunicipio$value <- as.factor(sample(letters[1:2], 2457, replace = TRUE) )
+
+gg = MXMunicipioChoropleth$new(df_mxmunicipio)
+
+gg$title <- "Municipios a and b"
+
+gg$set_num_colors(2)
+
+gg$ggplot_scale <- scale_fill_brewer("type", type = "qual")
+p <- gg$render()
+p + theme_void()
+
+```
+
+
+I got some erros here
+```{r}
+
+token <- "6b11996c-1a52-72a9-0187-e49bf9e607ce"
+
+mxc_regions <- subset(df_mxmunicipio, metro_area == "Valle de México")$region
+#mxc_regions
+
+
+# choropleth_inegi(token, mxc_regions, 
+#                  indicator = "1002000011", 
+#                  silent = FALSE,
+#                  legend = "años")
+
+state_regions <- df_mxstate$region
+
+
+# choropleth_inegi(token, state_regions, 
+#                  indicator = "1002000003",
+#                  legend = "número\nde\nmujeres")
+
+
+
+state_regions <- df_mxstate$region
+## You can look up the numeric indicator codes at
+## http://www.beta.inegi.org.mx/servicios/api_biinegi.html
+
+#choropleth_inegi(token, state_regions, "1002000003")
+
+
+```
 
